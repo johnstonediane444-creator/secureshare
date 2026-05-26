@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureShare - File Security QR Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<style>
+  :root {
+    --bg: #F4F1EC;
+    --surface: #FFFFFF;
+    --surface2: #EEE9E1;
+    --ink: #1A1714;
+    --ink-muted: #6B6560;
+    --accent: #2D6A4F;
+    --accent-light: #52B788;
+    --accent-glow: rgba(45,106,79,0.12);
+    --gold: #C9A84C;
+    --gold-light: #E8D5A3;
+    --danger: #C0392B;
+    --border: rgba(26,23,20,0.10);
+    --shadow: 0 4px 24px rgba(26,23,20,0.08);
+    --shadow-lg: 0 12px 48px rgba(26,23,20,0.14);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(244,241,236,0.88);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+  .nav-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .nav-links { display: flex; align-items: center; gap: 8px; }
+  .nav-links a {
+    color: var(--ink-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+    padding: 6px 14px; border-radius: 20px; transition: all 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--ink); background: var(--surface2); }
+  .nav-actions { display: flex; gap: 10px; }
+  .btn-ghost {
+    border: 1.5px solid var(--border); background: transparent; color: var(--ink);
+    padding: 7px 20px; border-radius: 20px; cursor: pointer; font-size: 0.88rem;
+    font-weight: 500; font-family: inherit; transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary {
+    background: var(--ink); color: var(--bg);
+    padding: 8px 22px; border-radius: 20px; border: none;
+    cursor: pointer; font-size: 0.88rem; font-weight: 500; font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn-primary:hover { background: var(--accent); }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 40%, #081C15 100%);
+    color: white;
+    padding: 100px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 110%, rgba(82,183,136,0.25) 0%, transparent 70%);
+  }
+  .hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.03) 39px, rgba(255,255,255,0.03) 40px),
+                      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.03) 39px, rgba(255,255,255,0.03) 40px);
+  }
+  .hero-content { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
+  .hero-tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 5px 16px; border-radius: 20px;
+    font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 28px; color: rgba(255,255,255,0.85);
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    line-height: 1.15; margin-bottom: 20px;
+    color: white;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent-light); }
+  .hero p { font-size: 1.05rem; color: rgba(255,255,255,0.72); line-height: 1.7; max-width: 520px; margin: 0 auto 36px; }
+  .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-hero {
+    padding: 13px 32px; border-radius: 28px; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; border: none; transition: all 0.25s;
+  }
+  .btn-hero-fill { background: var(--accent-light); color: var(--ink); }
+  .btn-hero-fill:hover { background: #74C69D; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(82,183,136,0.4); }
+  .btn-hero-outline { background: transparent; border: 1.5px solid rgba(255,255,255,0.35); color: white; }
+  .btn-hero-outline:hover { background: rgba(255,255,255,0.08); }
+
+  /* ── MAIN LAYOUT ── */
+  .page-section { padding: 72px 40px; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 2rem; margin-bottom: 6px; }
+  .section-line { width: 40px; height: 3px; background: var(--gold); border-radius: 2px; margin: 10px 0 40px; }
+
+  /* ── USER CENTER ── */
+  .user-center-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 28px;
+  max-width: 1080px;
+  margin: 0 auto;
+  align-items: start;   /* ← 防止侧边栏被拉伸撑高 */
+  min-width: 0;         /* ← 防止grid子项溢出 */
+}
+
+/* 右侧卡片也需要加 min-width: 0 防止内容溢出 */
+.user-center-layout > .card {
+  min-width: 0;
+  overflow: hidden;
+}
+  
+  .sidebar {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    box-shadow: var(--shadow);
+    height: fit-content;
+    width: 220px;          
+    flex-shrink: 0; 
+  }
+  .sidebar-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; color: white;
+    font-family: 'DM Serif Display', serif;
+  }
+  .sidebar-email { text-align: center; font-size: 0.82rem; color: var(--ink-muted); margin-bottom: 28px; }
+  .sidebar-nav {
+  display: flex;
+  flex-direction: column;  
+  width: 100%;
+}
+  .sidebar-nav a {
+    display: block; 
+    padding: 11px 16px;
+    border-radius: var(--radius-sm);
+    text-decoration: none; 
+    color: var(--ink-muted); 
+    font-size: 0.9rem; 
+    font-weight: 500;
+    transition: all 0.18s; 
+    margin-bottom: 4px;
+    white-space: normal;     
+    word-break: keep-all;   
+    line-height: 1.4;       
+    box-sizing: border-box;  
+    width: 100%;            
+  }
+  .sidebar-nav a:hover { background: var(--surface2); color: var(--ink); }
+  .sidebar-nav a.active {
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    color: white;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 36px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem; margin-bottom: 4px;
+  }
+  .card-divider { height: 3px; width: 36px; background: var(--gold); border-radius: 2px; margin: 10px 0 28px; }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: var(--ink); }
+  .form-input {
+    width: 100%; padding: 11px 16px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--ink);
+    font-size: 0.92rem; font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .form-input::placeholder { color: #B8B2AC; }
+  .form-error { font-size: 0.78rem; color: var(--danger); margin-top: 5px; }
+  
+  .checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+  .checkbox-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .checkbox-row label { font-size: 0.88rem; color: var(--ink-muted); cursor: pointer; }
+
+  .btn-submit {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    color: white; border: none; font-size: 1rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all 0.25s;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(45,106,79,0.35); }
+
+  .link-row { text-align: center; margin-top: 18px; font-size: 0.85rem; color: var(--ink-muted); }
+  .link-row a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .link-row a:hover { text-decoration: underline; }
+
+  /* ── AUTH TABS (Login / Register 切换) ── */
+  .auth-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 10px 0;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .auth-tab:hover { color: var(--ink); }
+  .auth-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── QR GENERATOR ── */
+  .qr-layout { max-width: 900px; margin: 0 auto; }
+  .qr-tabs { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 9px 22px; border-radius: 20px; font-size: 0.88rem; font-weight: 500;
+    border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--ink-muted); cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .tab-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+  .qr-panel { display: none; }
+  .qr-panel.active { display: block; }
+
+  .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  @media(max-width:680px) { .qr-grid { grid-template-columns: 1fr; } }
+
+  .qr-result-box {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 32px;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    min-height: 260px; justify-content: center;
+  }
+  #qr-output { background: white; padding: 16px; border-radius: var(--radius-sm); }
+  .qr-placeholder {
+    text-align: center; color: var(--ink-muted);
+  }
+  .qr-placeholder .icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.4; }
+  .qr-placeholder p { font-size: 0.85rem; }
+
+  .btn-download {
+    padding: 10px 28px; background: var(--ink); color: white;
+    border: none; border-radius: 20px; cursor: pointer;
+    font-family: inherit; font-size: 0.88rem; font-weight: 500;
+    transition: all 0.2s; display: none;
+  }
+  .btn-download:hover { background: var(--accent); }
+  .btn-download.visible { display: inline-block; }
+
+  .security-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .security-chip {
+    padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 0.82rem; font-weight: 500; text-align: center;
+    transition: all 0.2s; background: var(--surface); color: var(--ink-muted);
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+  }
+  .security-chip.selected { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+
+  /* ── ABOUT ── */
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; max-width: 1080px; margin: 0 auto; }
+  @media(max-width:740px) { .about-grid { grid-template-columns: 1fr; } }
+  .about-text h2 { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: var(--accent); margin-bottom: 18px; }
+  .about-text p { color: var(--ink-muted); line-height: 1.8; margin-bottom: 14px; font-size: 0.95rem; }
+  .about-visual {
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 50%, #52B788 100%);
+    padding: 40px;
+    color: white; min-height: 280px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .about-visual::before {
+    content: '';
+    position: absolute; top: -30px; right: -30px;
+    width: 140px; height: 140px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .about-visual::after {
+    content: '';
+    position: absolute; bottom: -20px; left: 20px;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+  }
+  .about-visual .big-icon { font-size: 3.5rem; margin-bottom: 18px; }
+  .about-visual h3 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 10px; }
+  .about-visual p { font-size: 0.88rem; opacity: 0.8; line-height: 1.7; }
+  .feature-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+  .pill {
+    padding: 6px 16px; border-radius: 20px;
+    background: var(--accent-glow); color: var(--accent);
+    font-size: 0.8rem; font-weight: 600; border: 1px solid rgba(45,106,79,0.2);
+  }
+
+  /* ── SCAN ── */
+  .scan-layout { max-width: 900px; margin: 0 auto; }
+  .scan-card { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  @media(max-width:680px) { .scan-card { grid-template-columns: 1fr; } }
+  
+  .camera-box {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    min-height: 280px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; border: 2px dashed var(--border);
+    position: relative; overflow: hidden;
+  }
+  .camera-icon { font-size: 3rem; opacity: 0.35; }
+  .camera-label { font-size: 0.85rem; color: var(--ink-muted); text-align: center; padding: 0 20px; }
+
+  @keyframes scanline {
+    0%   { top: calc(50% - 90px); }
+    50%  { top: calc(50% + 88px); }
+    100% { top: calc(50% - 90px); }
+  }
+  
+  .scan-actions { display: flex; flex-direction: column; gap: 10px; }
+  .btn-scan {
+    padding: 11px 20px; border-radius: var(--radius-sm); font-family: inherit;
+    font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    border: 1.5px solid transparent;
+  }
+  .btn-scan-primary { background: var(--accent); color: white; }
+  .btn-scan-primary:hover { background: #236140; }
+  .btn-scan-secondary { background: transparent; border-color: var(--border); color: var(--ink-muted); }
+  .btn-scan-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── PORTFOLIO ── */
+  .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-width: 1080px; margin: 0 auto; }
+  .portfolio-item {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    transition: all 0.25s;
+    cursor: pointer;
+  }
+  .portfolio-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .portfolio-thumb {
+    width: 100%; aspect-ratio: 1;
+    background: linear-gradient(135deg, var(--surface2) 0%, var(--gold-light) 100%);
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+  }
+  .portfolio-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+  .portfolio-meta { font-size: 0.78rem; color: var(--ink-muted); line-height: 1.6; }
+  .p-tag { display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:600;margin-left:5px;vertical-align:middle; }
+  .p-tag-active { background:var(--accent-glow);color:var(--accent); }
+  .p-tag-expired { background:#fff0f0;color:var(--danger); }
+  .p-tag-locked { background:#fff8e6;color:#9a6d00; }
+  .p-actions { display:flex;gap:6px;margin-top:10px;flex-wrap:wrap; }
+  .p-btn { flex:1;min-width:48px;padding:6px 8px;border-radius:var(--radius-sm);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--ink-muted);font-family:inherit;transition:all 0.18s;text-align:center; }
+  .p-btn:hover { border-color:var(--accent);color:var(--accent); }
+  .p-btn.red:hover { border-color:var(--danger);color:var(--danger); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink);
+    color: rgba(255,255,255,0.6);
+    padding: 40px;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--accent-light); text-decoration: none; }
+
+  /* ── PAGE VISIBILITY ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── NOTIFICATION ── */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--ink); color: white;
+    padding: 14px 22px; border-radius: var(--radius-sm);
+    font-size: 0.88rem; box-shadow: var(--shadow-lg);
+    transform: translateY(20px); opacity: 0;
+    transition: all 0.3s; z-index: 999; pointer-events: none;
+    border-left: 3px solid var(--accent-light);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+    background: var(--accent-glow); color: var(--accent); vertical-align: middle; margin-left: 6px;
+  }
+
+  /* ── EXPIRY SELECT ── */
+  select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6560' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav>
+  <a class="nav-brand" href="#" onclick="showPage('home')">
+    <span class="dot"></span>SecureShare
+  </a>
+  <div class="nav-links">
+    <a href="#" class="active" onclick="navClick(this,'home')">Home</a>
+    <a href="#" onclick="navClick(this,'generate')">Generate</a>
+    <a href="#" onclick="navClick(this,'scan')">Scan</a>
+    <a href="#" onclick="navClick(this,'portfolio')">My Files</a>
+    <a href="#" onclick="navClick(this,'usercenter')">User Center</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-ghost" onclick="navClick(document.querySelector('.nav-links a:nth-child(5)'),'usercenter')">Login</button>
+    <button class="btn-primary" onclick="navClick(document.querySelector('.nav-links a:nth-child(5)'),'usercenter')">Register</button>
+  </div>
+</nav>
+
+<!-- ══════════ HOME PAGE ══════════ -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-content">
+      <span class="hero-tag">🔐 Encrypted · Traceable · Expirable</span>
+      <h1>Share Files with <em>Confidence</em> and Control</h1>
+      <p>Generate secure QR codes for your documents and files. Set expiry, passwords, and access limits — then share with anyone.</p>
+      <div class="hero-cta">
+        <button class="btn-hero btn-hero-fill" onclick="navClick(document.querySelectorAll('.nav-links a')[1],'generate')">Generate QR Code</button>
+        <button class="btn-hero btn-hero-outline" onclick="navClick(document.querySelectorAll('.nav-links a')[2],'scan')">Scan a Code</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-section" style="background: var(--surface);">
+    <div class="about-grid">
+      <div class="about-text">
+        <h2>Security Meets Simplicity</h2>
+        <p>SecureShare transforms how you share sensitive files. Instead of emailing attachments or risking exposed links, wrap your files in an intelligent QR code with full access control.</p>
+        <p>Each QR code can carry an expiry time, a password, a view limit, and a unique fingerprint — giving you total visibility into who accessed your files and when.</p>
+        <p>Whether you're a professional, researcher, or creative, SecureShare gives you enterprise-grade security with a single click.</p>
+        <div class="feature-pills">
+          <span class="pill">AES-256 Encryption</span>
+          <span class="pill">One-time Links</span>
+          <span class="pill">Audit Logs</span>
+          <span class="pill">Custom Expiry</span>
+        </div>
+      </div>
+      <div class="about-visual">
+        <div class="big-icon">🛡️</div>
+        <h3>Zero Leakage Guarantee</h3>
+        <p>Files are encrypted at rest and in transit. QR codes never store raw data — only tokenized references that expire on schedule.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-section">
+    <div style="max-width:1080px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <p class="section-title">Everything You Need</p>
+        <div class="section-line" style="margin:10px auto 0;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;">
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.2rem;margin-bottom:14px;">📁</div>
+          <div style="font-weight:600;margin-bottom:8px;">Upload Any File</div>
+          <div style="font-size:0.85rem;color:var(--ink-muted);line-height:1.7;">PDF, images, archives, documents — up to 100MB per file.</div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.2rem;margin-bottom:14px;">⚙️</div>
+          <div style="font-weight:600;margin-bottom:8px;">Customize Access</div>
+          <div style="font-size:0.85rem;color:var(--ink-muted);line-height:1.7;">Set password, expiry date, max views, and download permissions.</div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.2rem;margin-bottom:14px;">📊</div>
+          <div style="font-weight:600;margin-bottom:8px;">Track Access</div>
+          <div style="font-size:0.85rem;color:var(--ink-muted);line-height:1.7;">See who scanned the code, from where, and at what time.</div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="font-size:2.2rem;margin-bottom:14px;">🔒</div>
+          <div style="font-weight:600;margin-bottom:8px;">Revoke Anytime</div>
+          <div style="font-size:0.85rem;color:var(--ink-muted);line-height:1.7;">Instantly invalidate any QR code from your dashboard.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ GENERATE PAGE ══════════ -->
+<div id="page-generate" class="page">
+  <div class="page-section">
+    <div class="qr-layout">
+      <p class="section-title">Generate QR Code</p>
+      <div class="section-line"></div>
+      <div class="qr-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-url')">🔗 URL / Link</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-file')">📂 File Upload</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-text')">📝 Text / Note</button>
+      </div>
+
+      <!-- URL TAB -->
+      <div id="tab-url" class="qr-panel active card">
+        <div class="qr-grid">
+          <div>
+            <div class="form-group">
+              <label class="form-label">URL or File Link</label>
+              <input type="url" id="url-input" class="form-input" placeholder="https://your-file-link.com/..." oninput="liveGenerate()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">QR Code Name</label>
+              <input type="text" id="qr-name" class="form-input" placeholder="e.g. Contract_2026_Q1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Access Password <span style="color:var(--ink-muted);font-weight:400;font-size:0.78rem;">(optional)</span></label>
+              <input type="password" id="qr-pass" class="form-input" placeholder="Leave blank for open access">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Expiry</label>
+              <select id="qr-expiry" class="form-input">
+                <option>Never</option>
+                <option>1 Hour</option>
+                <option>24 Hours</option>
+                <option>7 Days</option>
+                <option>30 Days</option>
+                <option>Custom Date</option>
+              </select>
+            </div>
+            <div style="margin-bottom:20px;">
+              <label class="form-label">Security Options</label>
+              <div class="security-options">
+                <div class="security-chip" onclick="toggleChip(this)">🔢 Limit Views</div>
+                <div class="security-chip" onclick="toggleChip(this)">🚫 No Download</div>
+                <div class="security-chip" onclick="toggleChip(this)">📍 Track Location</div>
+                <div class="security-chip" onclick="toggleChip(this)">✉️ Notify on Scan</div>
+              </div>
+            </div>
+            <button class="btn-submit" onclick="generateQR()">Generate Secure QR Code</button>
+          </div>
+          <div>
+            <div class="qr-result-box" id="qr-result-box">
+              <div class="qr-placeholder" id="qr-placeholder">
+                <div class="icon">◼</div>
+                <p>Your QR code will appear here</p>
+              </div>
+              <div id="qr-output"></div>
+            </div>
+            <div id="url-qr-info" style="display:none;margin-top:14px;background:var(--surface2);border-radius:var(--radius-sm);padding:14px 16px;font-size:0.82rem;color:var(--ink-muted);line-height:1.9;"></div>
+            <div style="text-align:center;margin-top:14px;">
+              <button class="btn-download" id="btn-dl" onclick="downloadQR()">⬇ Download PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILE TAB -->
+      <div id="tab-file" class="qr-panel card">
+        <div class="qr-grid">
+          <div>
+            <div class="form-group">
+              <label class="form-label">Upload File</label>
+              <div style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:28px;text-align:center;cursor:pointer;background:var(--bg);transition:border-color 0.2s;" onclick="document.getElementById('file-input').click()" id="drop-zone">
+                <div style="font-size:2rem;margin-bottom:8px;">📤</div>
+                <p style="font-size:0.88rem;color:var(--ink-muted);">Click or drag a file here</p>
+                <p style="font-size:0.76rem;color:var(--ink-muted);margin-top:4px;">Any file type · max 4MB (stored locally in browser)</p>
+                <input type="file" id="file-input" style="display:none" onchange="fileSelected(this)">
+              </div>
+              <p id="file-label" style="font-size:0.8rem;color:var(--accent);margin-top:8px;"></p>
+              <p id="file-size-warning" style="display:none;font-size:0.78rem;color:var(--danger);margin-top:4px;">⚠️ File exceeds 4MB — may fail to save. Try a smaller file.</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">QR Code Label <span style="color:var(--danger);font-size:0.75rem;">* required</span></label>
+              <input type="text" id="file-name" class="form-input" placeholder="e.g. Contract_2026_Q1">
+              <p id="file-name-error" class="form-error" style="display:none;">Please enter a label</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Access Password <span style="color:var(--ink-muted);font-weight:400;font-size:0.78rem;">(optional)</span></label>
+              <input type="password" id="file-pass" class="form-input" placeholder="Leave blank for open access">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Expiry</label>
+              <select id="file-expiry" class="form-input">
+                <option value="never">Never</option>
+                <option value="1h">1 Hour</option>
+                <option value="24h">24 Hours</option>
+                <option value="7d">7 Days</option>
+                <option value="30d">30 Days</option>
+              </select>
+            </div>
+            <div style="background:var(--accent-glow);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;font-size:0.8rem;color:var(--ink-muted);line-height:1.7;border-left:3px solid var(--accent);">
+              <b style="color:var(--accent);">⚠️ Same-device only:</b> The file is stored in <em>this browser's</em> local storage. Scanning on <b>the same device and browser</b> will work. To share across devices, upload the file to Google Drive / Dropbox first, then use the <b>URL tab</b> with that link.
+            </div>
+            <button class="btn-submit" onclick="generateFileQR()">Generate File QR Code</button>
+          </div>
+          <div>
+            <div class="qr-result-box" id="qr-result-box-file">
+              <div class="qr-placeholder" id="qr-placeholder-file">
+                <div class="icon">📂</div>
+                <p>Upload a file to generate its QR</p>
+              </div>
+              <div id="qr-output-file"></div>
+            </div>
+            <div id="file-qr-info" style="display:none;margin-top:14px;background:var(--surface2);border-radius:var(--radius-sm);padding:14px 16px;font-size:0.82rem;color:var(--ink-muted);line-height:1.9;"></div>
+            <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+              <button class="btn-download" id="btn-dl-file" onclick="downloadFromBox('qr-output-file')">⬇ Download QR PNG</button>
+              <button class="btn-download" id="btn-preview-file" style="display:none;background:var(--accent);" onclick="previewFileViewer()">👁 Preview</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEXT TAB -->
+      <div id="tab-text" class="qr-panel card">
+        <div class="qr-grid">
+          <div>
+            <div class="form-group">
+              <label class="form-label">Text Content</label>
+              <textarea id="text-input" class="form-input" rows="5" placeholder="Type a note, credentials, or message to encode..." style="resize:vertical;" oninput="liveGenerateText()"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Label</label>
+              <input type="text" id="text-name" class="form-input" placeholder="e.g. WiFi Password, Secret Note">
+            </div>
+            <button class="btn-submit" onclick="generateTextQR()">Generate Text QR Code</button>
+          </div>
+          <div>
+            <div class="qr-result-box" id="qr-result-box-text">
+              <div class="qr-placeholder" id="qr-placeholder-text"><div class="icon">📝</div><p>Enter text to generate QR</p></div>
+              <div id="qr-output-text"></div>
+            </div>
+            <div style="text-align:center;margin-top:14px;">
+              <button class="btn-download" id="btn-dl-text" onclick="downloadQRText()">⬇ Download PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SCAN PAGE ══════════ -->
+<div id="page-scan" class="page">
+  <div class="page-section">
+    <div class="scan-layout">
+      <p class="section-title">Scan QR Code</p>
+      <div class="section-line"></div>
+      <div class="card">
+        <div class="scan-card">
+          <!-- 左侧：摄像头区域 -->
+          <div>
+            <div class="camera-box" id="camera-box">
+              <div class="camera-icon" id="camera-icon">📷</div>
+              <div class="camera-label" id="camera-label">Camera feed will appear here<br>after pressing Start Camera</div>
+              <!-- 视频流 -->
+              <video id="camera-video" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);" autoplay playsinline muted></video>
+              <!-- 扫描动画遮罩 -->
+              <div id="scan-overlay" style="display:none;position:absolute;inset:0;pointer-events:none;">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:180px;height:180px;border:2px solid var(--accent-light);border-radius:8px;"></div>
+                <div id="scan-line" style="position:absolute;top:calc(50% - 90px);left:calc(50% - 90px);width:180px;height:2px;background:linear-gradient(90deg,transparent,var(--accent-light),transparent);animation:scanline 1.8s linear infinite;"></div>
+              </div>
+              <!-- 隐藏 canvas 用于逐帧解码 -->
+              <canvas id="scan-canvas" style="display:none;"></canvas>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button class="btn-scan btn-scan-primary" id="btn-start-cam" onclick="startCamera()" style="flex:1;">▶ Start Camera</button>
+              <button class="btn-scan btn-scan-secondary" id="btn-stop-cam" onclick="stopCamera()" style="flex:1;" disabled>■ Stop</button>
+            </div>
+          </div>
+
+          <!-- 右侧：结果 + 上传图片扫描 -->
+          <div>
+            <!-- 扫描结果框 -->
+            <div id="scan-result-box" style="background:var(--surface2);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;min-height:80px;display:flex;align-items:center;gap:14px;">
+              <div id="scan-result-icon" style="font-size:1.8rem;">🔍</div>
+              <div>
+                <p style="font-size:0.8rem;color:var(--ink-muted);margin-bottom:3px;" id="scan-result-label">Waiting for scan...</p>
+                <p style="font-size:0.9rem;font-weight:600;word-break:break-all;color:var(--ink);" id="scan-result-value">—</p>
+              </div>
+            </div>
+            <!-- 扫描到链接时显示的跳转按钮 -->
+            <div id="scan-open-btn" style="display:none;margin-bottom:18px;">
+              <button class="btn-submit" onclick="openScanResult()" style="font-size:0.9rem;padding:11px;">
+                🔗 Open Link
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Or Upload QR Image to Scan</label>
+              <input type="file" id="scan-upload-input" class="form-input" accept="image/*" style="padding:8px 12px;" onchange="scanUploadedImage(this)">
+              <p id="scan-upload-error" style="font-size:0.78rem;color:var(--danger);margin-top:5px;display:none;">No QR code found in this image.</p>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn-scan btn-scan-secondary" onclick="clearScanResult()">✕ Clear Result</button>
+              <button class="btn-scan btn-scan-secondary" onclick="navClick(document.querySelectorAll('.nav-links a')[1],'generate')">＋ Create New QR Instead</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PORTFOLIO PAGE ══════════ -->
+<div id="page-portfolio" class="page">
+  <div class="page-section">
+    <div style="max-width:1080px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+        <p class="section-title">My Files <span class="badge" id="portfolio-count">0</span></p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="portfolio-filter" class="form-input" style="width:auto;padding:7px 32px 7px 12px;font-size:0.85rem;" onchange="renderPortfolio()">
+            <option value="all">All Types</option>
+            <option value="URL">URL</option>
+            <option value="File">File</option>
+            <option value="Text">Text</option>
+          </select>
+          <button onclick="navClick(document.querySelectorAll('.nav-links a')[1],'generate')" class="btn-submit" style="width:auto;padding:9px 22px;font-size:0.88rem;">＋ New QR</button>
+        </div>
+      </div>
+      <div class="section-line"></div>
+      <div id="portfolio-grid" class="portfolio-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VIEWER PAGE（扫码跳转的下载页） ══════════ -->
+<div id="page-viewer" class="page">
+  <div class="page-section" style="max-width:520px;margin:0 auto;">
+    <div class="card" style="text-align:center;">
+      <div id="viewer-icon" style="font-size:4rem;margin-bottom:16px;">📄</div>
+      <p class="card-title" id="viewer-title" style="font-size:1.4rem;">Loading...</p>
+      <div class="card-divider" style="margin:10px auto 20px;"></div>
+      <!-- 密码验证区 -->
+      <div id="viewer-password-area" style="display:none;margin-bottom:20px;">
+        <p style="font-size:0.88rem;color:var(--ink-muted);margin-bottom:12px;">🔒 This content is password protected</p>
+        <input type="password" id="viewer-pass-input" class="form-input" placeholder="Enter access password" style="margin-bottom:8px;">
+        <p id="viewer-pass-error" class="form-error" style="display:none;">Incorrect password</p>
+        <button class="btn-submit" style="margin-top:8px;" onclick="verifyViewerPassword()">Unlock</button>
+      </div>
+      <!-- 内容区（解锁后显示） -->
+      <div id="viewer-content" style="display:none;">
+        <div id="viewer-meta" style="font-size:0.85rem;color:var(--ink-muted);margin-bottom:24px;line-height:1.9;text-align:left;background:var(--surface2);padding:14px 18px;border-radius:var(--radius-sm);"></div>
+        <div id="viewer-expired-msg" style="display:none;background:#fff0f0;border:1px solid var(--danger);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;color:var(--danger);font-weight:600;">
+          ⏰ This QR code has expired and is no longer accessible.
+        </div>
+        <div id="viewer-actions" style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn-submit" id="viewer-download-btn" onclick="viewerDownload()">⬇ Download File</button>
+          <button class="btn-submit" id="viewer-open-btn" style="display:none;background:var(--ink);" onclick="viewerOpenUrl()">🔗 Open URL</button>
+        </div>
+      </div>
+      <button style="margin-top:20px;background:none;border:none;color:var(--ink-muted);cursor:pointer;font-size:0.85rem;font-family:inherit;" onclick="navClick(document.querySelectorAll('.nav-links a')[0],'home')">← Back to Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ USER CENTER PAGE ══════════ -->
+<div id="page-usercenter" class="page">
+  <div style="background:linear-gradient(135deg,#2D6A4F,#1B4332,#081C15);padding:60px 40px;text-align:center;color:white;">
+    <p style="font-family:'DM Serif Display',serif;font-size:2.2rem;margin-bottom:8px;">User Center</p>
+    <p style="font-size:0.95rem;opacity:0.75;">Login or register to save and manage your secure QR codes</p>
+  </div>
+  <div class="page-section">
+    <div class="user-center-layout">
+
+      <!-- 侧边栏 -->
+      <div class="sidebar">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-email" id="sidebar-email">Not logged in</div>
+        <nav class="sidebar-nav">
+          <a href="#" id="nav-personal" onclick="switchUserTab('personal'); return false;">👤 Personal Information</a>
+          <a href="#" id="nav-creations" onclick="switchUserTab('creations'); return false;">📁 My Creations</a>
+          <a href="#" id="nav-settings" onclick="switchUserTab('settings'); return false;">⚙️ Account Settings</a>
+          <a href="#" id="nav-help" onclick="switchUserTab('help'); return false;">❓ Help & Support</a>
+        </nav>
+      </div>
+
+      <!-- 右侧主内容 -->
+      <div class="card" style="min-width:0;">
+        <p class="card-title">Account Management</p>
+        <div class="card-divider"></div>
+
+        <!-- ① 登录 / 注册 面板（未登录时显示） -->
+        <div id="panel-auth">
+          <!-- Tab 切换按钮 -->
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Login</button>
+            <button class="auth-tab" id="tab-register-btn" onclick="switchAuthTab('register')">Register</button>
+          </div>
+
+          <!-- 登录表单 -->
+          <div id="form-login">
+            <p style="font-weight:600;font-size:1rem;margin-bottom:18px;">Account Login</p>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="login-email" class="form-input" placeholder="Please enter your email">
+              <p class="form-error" id="email-error" style="display:none;">Please enter a valid email address</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="login-password" class="form-input" placeholder="Please enter your password">
+              <p class="form-error" id="pass-error" style="display:none;">Password cannot be empty</p>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="remember-me">
+              <label for="remember-me">Remember Me</label>
+            </div>
+            <button class="btn-submit" onclick="doLogin()">Login</button>
+            <div class="link-row">Don't have an account? <a href="#" onclick="switchAuthTab('register'); return false;">Register now</a></div>
+          </div>
+
+          <!-- 注册表单 -->
+          <div id="form-register" style="display:none;">
+            <p style="font-weight:600;font-size:1rem;margin-bottom:18px;">Create Account</p>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input type="text" id="reg-name" class="form-input" placeholder="Please enter your username">
+              <p class="form-error" id="reg-name-error" style="display:none;">Username cannot be empty</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="reg-email" class="form-input" placeholder="Please enter your email">
+              <p class="form-error" id="reg-email-error" style="display:none;">Please enter a valid email address</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="reg-password" class="form-input" placeholder="At least 6 characters">
+              <p class="form-error" id="reg-pass-error" style="display:none;">Password must be at least 6 characters</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm Password</label>
+              <input type="password" id="reg-password2" class="form-input" placeholder="Enter password again">
+              <p class="form-error" id="reg-pass2-error" style="display:none;">Passwords do not match</p>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="agree-terms">
+              <label for="agree-terms">I agree to the <a href="#" style="color:var(--accent);">Terms of Service</a></label>
+            </div>
+            <p class="form-error" id="reg-terms-error" style="display:none;">Please agree to the terms to continue</p>
+            <button class="btn-submit" onclick="doRegister()">Create Account</button>
+            <div class="link-row">Already have an account? <a href="#" onclick="switchAuthTab('login'); return false;">Login now</a></div>
+          </div>
+        </div>
+
+        <!-- ② 登录后：个人信息 -->
+        <div id="panel-personal" style="display:none;">
+          <p style="font-weight:600;font-size:1rem;margin-bottom:20px;">Personal Information</p>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="profile-name" class="form-input" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="profile-email" class="form-input" placeholder="Your email" disabled style="opacity:0.6;cursor:not-allowed;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bio <span style="color:var(--ink-muted);font-weight:400;">(optional)</span></label>
+            <input type="text" id="profile-bio" class="form-input" placeholder="A short introduction">
+          </div>
+          <button class="btn-submit" onclick="saveProfile()">Save Changes</button>
+        </div>
+
+        <!-- ③ 登录后：我的创作 -->
+        <div id="panel-creations" style="display:none;">
+          <p style="font-weight:600;font-size:1rem;margin-bottom:20px;">My Creations</p>
+          <div id="creations-list"></div>
+        </div>
+
+        <!-- ④ 登录后：账户设置 -->
+        <div id="panel-settings" style="display:none;">
+          <p style="font-weight:600;font-size:1rem;margin-bottom:20px;">Account Settings</p>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" id="new-pass" class="form-input" placeholder="Leave blank to keep current password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" id="new-pass2" class="form-input" placeholder="Enter new password again">
+            <p class="form-error" id="new-pass-error" style="display:none;">Passwords do not match</p>
+          </div>
+          <button class="btn-submit" style="margin-bottom:14px;" onclick="changePassword()">Update Password</button>
+          <div style="border-top:1px solid var(--border);padding-top:20px;margin-top:8px;">
+            <button class="btn-submit" style="background:var(--danger);" onclick="doLogout()">Logout</button>
+          </div>
+        </div>
+
+        <!-- ⑤ Help & Support -->
+        <div id="panel-help" style="display:none;">
+          <p style="font-weight:600;font-size:1rem;margin-bottom:20px;">Help & Support</p>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="card" style="box-shadow:none;border:1px solid var(--border);padding:20px;">
+              <p style="font-weight:600;margin-bottom:6px;">📖 How to generate a QR code?</p>
+              <p style="font-size:0.88rem;color:var(--ink-muted);line-height:1.7;">Go to the Generate page, enter a URL or text, configure security options, then click Generate.</p>
+            </div>
+            <div class="card" style="box-shadow:none;border:1px solid var(--border);padding:20px;">
+              <p style="font-weight:600;margin-bottom:6px;">🔒 How does encryption work?</p>
+              <p style="font-size:0.88rem;color:var(--ink-muted);line-height:1.7;">All QR codes are tokenized. The raw URL or file link is never stored directly in the code.</p>
+            </div>
+            <div class="card" style="box-shadow:none;border:1px solid var(--border);padding:20px;">
+              <p style="font-weight:600;margin-bottom:6px;">✉️ Contact us</p>
+              <p style="font-size:0.88rem;color:var(--ink-muted);line-height:1.7;">Email: support@secureshare.app</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /card -->
+    </div><!-- /user-center-layout -->
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast" id="toast-msg"></div>
+
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom:6px;font-family:'DM Serif Display',serif;font-size:1.1rem;color:white;">SecureShare</p>
+  <p>© 2026 SecureShare. Built for privacy, designed for people. &nbsp;·&nbsp; <a href="#">Privacy Policy</a> &nbsp;·&nbsp; <a href="#">Terms</a></p>
+</footer>
+
+<script>
+// ── PAGE NAVIGATION ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+}
+function navClick(el, pageId) {
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  if (el) el.classList.add('active');
+  showPage(pageId);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (pageId === 'usercenter') initUserCenter();
+  if (pageId === 'portfolio')  renderPortfolio();
+  return false;
+}
+
+// ── TABS ──
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.qr-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ── SHARED HELPERS ──
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function fileEmoji(name) {
+  if (!name) return '📄';
+  const e = name.split('.').pop().toLowerCase();
+  return {pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📋',pptx:'📋',
+    png:'🖼',jpg:'🖼',jpeg:'🖼',gif:'🖼',webp:'🖼',zip:'📦',rar:'📦',
+    mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',txt:'📄',csv:'📊',json:'📄'}[e] || '📄';
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function calcExpiry(val) {
+  if (!val || val==='never') return { ts: null, text: 'Never' };
+  const ms = {never:0,'1h':3600000,'24h':86400000,'7d':604800000,'30d':2592000000};
+  const d = new Date(Date.now() + ms[val]);
+  return { ts: d.getTime(), text: d.toLocaleString() };
+}
+function isExpired(record) {
+  return record.revoked || (record.expiryTs && Date.now() > record.expiryTs);
+}
+function saveQRRecord(record) {
+  try {
+    const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+    all.unshift(record);
+    localStorage.setItem('ss_qrcodes', JSON.stringify(all));
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── RENDER QR CANVAS ──
+function renderQRCanvas(outputId, placeholderId, dlBtnId, content, onSuccess) {
+  const el = document.getElementById(outputId);
+  el.innerHTML = '';
+  document.getElementById(placeholderId).style.display = 'none';
+  try {
+    new QRCode(el, { text: content, width: 200, height: 200,
+      colorDark: '#1A1714', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    if (dlBtnId) document.getElementById(dlBtnId).classList.add('visible');
+    if (onSuccess) onSuccess();
+  } catch(e) {
+    document.getElementById(placeholderId).style.display = 'block';
+    toast('❌ QR generation failed — content may be too long.');
+  }
+}
+
+// ──────────────────────────────────────────────
+// URL TAB — generateQR (with real password logic)
+// ──────────────────────────────────────────────
+function generateQR() {
+  const url      = document.getElementById('url-input').value.trim();
+  const name     = document.getElementById('qr-name').value.trim();
+  const password = document.getElementById('qr-pass').value;
+  const expSel   = document.getElementById('qr-expiry').value;
+
+  if (!url) { toast('Please enter a URL first.'); return; }
+
+  const expMap = {'Never':'never','1 Hour':'1h','24 Hours':'24h','7 Days':'7d','30 Days':'30d','Custom Date':'never'};
+  const expKey = expMap[expSel] || 'never';
+  const { ts: expiryTs, text: expiryText } = calcExpiry(expKey);
+
+  // 生成唯一 ID，把真正的 URL 和密码存到 localStorage
+  const id = 'ssurl_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+  const record = {
+    id, type: 'URL', name: name || url.substring(0,40),
+    url, password: password || '',   // 密码明文存储（演示用途）
+    expiryTs, expiryText,
+    createdAt: new Date().toISOString(), views: 0, revoked: false
+  };
+
+  if (!saveQRRecord(record)) { toast('❌ Storage full.'); return; }
+
+  // QR 码里编入 viewer 页面链接，而不是直接编 URL
+  const viewerUrl = window.location.href.split('#')[0] + '#viewer/' + id;
+
+  renderQRCanvas('qr-output', 'qr-placeholder', 'btn-dl', viewerUrl, () => {
+    const infoEl = document.getElementById('url-qr-info');
+    infoEl.innerHTML =
+      `🔗 <b>URL:</b> ${escHtml(url.length>50?url.substr(0,50)+'…':url)}<br>` +
+      `🏷 <b>Label:</b> ${escHtml(name||'—')}<br>` +
+      `🔒 <b>Password:</b> ${password ? '✅ Protected' : 'None'}<br>` +
+      `⏱ <b>Expiry:</b> ${expiryText}`;
+    infoEl.style.display = 'block';
+    toast('✅ Secure QR generated!' + (password ? ' Password protection active.' : ''));
+  });
+}
+
+function liveGenerate() {
+  // live preview doesn't use password/expiry — just show a preview QR
+  const url = document.getElementById('url-input').value.trim();
+  if (url.length > 8) {
+    const el = document.getElementById('qr-output');
+    el.innerHTML = '';
+    document.getElementById('qr-placeholder').style.display = 'none';
+    try { new QRCode(el, { text: url, width:200, height:200, colorDark:'#1A1714', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
+  }
+}
+
+// ──────────────────────────────────────────────
+// TEXT TAB
+// ──────────────────────────────────────────────
+function generateTextQR() {
+  const text = document.getElementById('text-input').value.trim();
+  const name = document.getElementById('text-name').value.trim();
+  if (!text) { toast('Please enter some text first.'); return; }
+
+  const id = 'sstxt_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+  const record = {
+    id, type:'Text', name: name||text.substr(0,30),
+    content: text, password:'', expiryTs:null, expiryText:'Never',
+    createdAt: new Date().toISOString(), views:0, revoked:false
+  };
+  saveQRRecord(record);
+
+  const viewerUrl = window.location.href.split('#')[0] + '#viewer/' + id;
+  renderQRCanvas('qr-output-text', 'qr-placeholder-text', 'btn-dl-text', viewerUrl, () => {
+    toast('✅ Text QR generated!');
+  });
+}
+function liveGenerateText() {
+  const text = document.getElementById('text-input').value.trim();
+  if (text.length > 2) {
+    const el = document.getElementById('qr-output-text');
+    el.innerHTML = '';
+    document.getElementById('qr-placeholder-text').style.display = 'none';
+    try { new QRCode(el, { text, width:200, height:200, colorDark:'#1A1714', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M }); } catch(e) {}
+  }
+}
+
+function downloadQR() { downloadFromBox('qr-output'); }
+function downloadQRText() { downloadFromBox('qr-output-text'); }
+function downloadFromBox(id) {
+  const canvas = document.querySelector('#' + id + ' canvas');
+  if (!canvas) { toast('Generate a QR first.'); return; }
+  const a = document.createElement('a'); a.download = 'secureshare_qr.png';
+  a.href = canvas.toDataURL('image/png'); a.click();
+  toast('⬇ Downloading...');
+}
+
+// ── SECURITY CHIPS ──
+function toggleChip(el) { el.classList.toggle('selected'); }
+
+// ──────────────────────────────────────────────
+// FILE TAB — generateFileQR (stores base64, viewer enforces password)
+// ──────────────────────────────────────────────
+let selectedFile = null;
+let selectedFileData = null;
+
+function fileSelected(input) {
+  if (!input.files[0]) return;
+  selectedFile = input.files[0];
+  document.getElementById('file-label').textContent = '✔ ' + selectedFile.name + ' (' + formatBytes(selectedFile.size) + ')';
+  document.getElementById('file-size-warning').style.display = selectedFile.size > 4*1024*1024 ? 'block' : 'none';
+  selectedFileData = null;
+  const reader = new FileReader();
+  reader.onload = e => { selectedFileData = e.target.result; };
+  reader.readAsDataURL(selectedFile);
+  toast('File selected: ' + selectedFile.name);
+}
+
+function generateFileQR() {
+  const label    = document.getElementById('file-name').value.trim();
+  const password = document.getElementById('file-pass').value;
+  const expKey   = document.getElementById('file-expiry').value;
+
+  document.getElementById('file-name-error').style.display = 'none';
+  if (!selectedFile) { toast('⚠️ Please upload a file first.'); return; }
+  if (!label) { document.getElementById('file-name-error').style.display='block'; return; }
+  if (!selectedFileData) { toast('⏳ File still loading, try again.'); return; }
+
+  const { ts: expiryTs, text: expiryText } = calcExpiry(expKey);
+  const id = 'ssfile_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+
+  const record = {
+    id, type:'File', name: label, filename: selectedFile.name,
+    size: selectedFile.size, mimeType: selectedFile.type,
+    data: selectedFileData,           // base64 完整文件数据
+    password: password || '',         // 密码
+    expiryTs, expiryText,
+    createdAt: new Date().toISOString(), views:0, revoked:false
+  };
+
+  if (!saveQRRecord(record)) {
+    toast('❌ Storage full — file too large. Try a file under 2MB or use the URL tab.');
+    return;
+  }
+
+  const viewerUrl = window.location.href.split('#')[0] + '#viewer/' + id;
+  const outputEl = document.getElementById('qr-output-file');
+  const placeholder = document.getElementById('qr-placeholder-file');
+  outputEl.innerHTML = '';
+  placeholder.style.display = 'none';
+
+  try {
+    new QRCode(outputEl, { text: viewerUrl, width:200, height:200,
+      colorDark:'#1A1714', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
+
+    document.getElementById('file-qr-info').innerHTML =
+      `${fileEmoji(selectedFile.name)} <b>File:</b> ${escHtml(selectedFile.name)} (${formatBytes(selectedFile.size)})<br>` +
+      `🏷 <b>Label:</b> ${escHtml(label)}<br>` +
+      `🔒 <b>Password:</b> ${password ? '✅ Protected' : 'None'}<br>` +
+      `⏱ <b>Expiry:</b> ${expiryText}<br>` +
+      `<span style="font-size:0.74rem;opacity:0.7;">⚠️ Same-device sharing only</span>`;
+    document.getElementById('file-qr-info').style.display = 'block';
+    document.getElementById('btn-dl-file').classList.add('visible');
+    document.getElementById('btn-preview-file').style.display = 'inline-block';
+    document.getElementById('btn-preview-file').dataset.id = id;
+
+    toast('✅ File QR generated!' + (password ? ' Password protected.' : ''));
+  } catch(e) {
+    placeholder.style.display = 'block';
+    toast('❌ QR generation failed.');
+  }
+}
+
+function previewFileViewer() {
+  const id = document.getElementById('btn-preview-file').dataset.id;
+  if (id) openViewer(id);
+}
+
+// ──────────────────────────────────────────────
+// VIEWER PAGE — password gate + expiry check
+// ──────────────────────────────────────────────
+let viewerRecord = null;
+
+function openViewer(id) {
+  showPage('viewer');
+  const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  const record = all.find(r => r.id === id);
+  viewerRecord = record || null;
+
+  if (!record) {
+    document.getElementById('viewer-title').textContent = 'Not Found';
+    document.getElementById('viewer-icon').textContent = '❓';
+    document.getElementById('viewer-content').style.display = 'block';
+    document.getElementById('viewer-meta').innerHTML = 'This QR code does not exist or has been deleted.';
+    document.getElementById('viewer-download-btn').style.display = 'none';
+    document.getElementById('viewer-open-btn').style.display = 'none';
+    return;
+  }
+
+  const icon = record.type==='File' ? fileEmoji(record.filename) : (record.type==='URL' ? '🔗' : '📝');
+  document.getElementById('viewer-icon').textContent = icon;
+  document.getElementById('viewer-title').textContent = record.name || record.filename || 'Untitled';
+
+  // 如果有密码，先显示密码输入框
+  if (record.password) {
+    document.getElementById('viewer-password-area').style.display = 'block';
+    document.getElementById('viewer-content').style.display = 'none';
+    document.getElementById('viewer-pass-input').value = '';
+    document.getElementById('viewer-pass-error').style.display = 'none';
+    // 绑定回车键
+    document.getElementById('viewer-pass-input').onkeydown = e => { if(e.key==='Enter') verifyViewerPassword(); };
+  } else {
+    document.getElementById('viewer-password-area').style.display = 'none';
+    showViewerContent(record);
+  }
+}
+
+function verifyViewerPassword() {
+  if (!viewerRecord) return;
+  const input = document.getElementById('viewer-pass-input').value;
+  if (input !== viewerRecord.password) {
+    document.getElementById('viewer-pass-error').style.display = 'block';
+    document.getElementById('viewer-pass-input').value = '';
+    return;
+  }
+  document.getElementById('viewer-password-area').style.display = 'none';
+  showViewerContent(viewerRecord);
+}
+
+function showViewerContent(record) {
+  document.getElementById('viewer-content').style.display = 'block';
+  const expired = isExpired(record);
+
+  let metaHtml = '';
+  if (record.type === 'File') {
+    metaHtml = `📄 <b>${escHtml(record.filename)}</b> (${formatBytes(record.size)})<br>`;
+  } else if (record.type === 'URL') {
+    metaHtml = `🔗 <b>URL:</b> ${escHtml(record.url ? record.url.substr(0,60)+(record.url.length>60?'…':'') : '—')}<br>`;
+  } else {
+    metaHtml = `📝 <b>Content:</b> ${escHtml((record.content||'').substr(0,80)+(record.content&&record.content.length>80?'…':''))}<br>`;
+  }
+  metaHtml += `🕒 <b>Created:</b> ${new Date(record.createdAt).toLocaleString()}<br>`;
+  metaHtml += `⏱ <b>Expires:</b> ${record.expiryText || 'Never'}<br>`;
+  metaHtml += `👁 <b>Views:</b> ${record.views}`;
+  document.getElementById('viewer-meta').innerHTML = metaHtml;
+
+  const expMsg = document.getElementById('viewer-expired-msg');
+  const dlBtn  = document.getElementById('viewer-download-btn');
+  const openBtn = document.getElementById('viewer-open-btn');
+
+  if (expired) {
+    expMsg.style.display = 'block';
+    dlBtn.style.display = 'none';
+    openBtn.style.display = 'none';
+  } else {
+    expMsg.style.display = 'none';
+    if (record.type === 'File') {
+      dlBtn.style.display = 'block';
+      openBtn.style.display = 'none';
+    } else {
+      dlBtn.style.display = 'none';
+      openBtn.style.display = record.type === 'URL' ? 'block' : 'none';
+      if (record.type === 'Text') {
+        // 展示文本内容
+        const textBox = document.createElement('div');
+        textBox.style.cssText = 'background:var(--surface2);border-radius:var(--radius-sm);padding:16px;text-align:left;word-break:break-word;font-size:0.92rem;line-height:1.7;margin-bottom:12px;';
+        textBox.textContent = record.content || '';
+        document.getElementById('viewer-actions').prepend(textBox);
+      }
+    }
+    // 增加浏览次数
+    incrementViewCount(record.id);
+  }
+}
+
+function incrementViewCount(id) {
+  const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  const idx = all.findIndex(r => r.id === id);
+  if (idx !== -1) { all[idx].views = (all[idx].views||0) + 1; localStorage.setItem('ss_qrcodes', JSON.stringify(all)); }
+}
+
+function viewerDownload() {
+  if (!viewerRecord || !viewerRecord.data) { toast('File data not found.'); return; }
+  const a = document.createElement('a');
+  a.href = viewerRecord.data; a.download = viewerRecord.filename || 'download'; a.click();
+  toast('⬇ Downloading ' + viewerRecord.filename);
+}
+function viewerOpenUrl() {
+  if (!viewerRecord || !viewerRecord.url) return;
+  window.open(viewerRecord.url, '_blank');
+}
+
+// ──────────────────────────────────────────────
+// CAMERA (real scan)
+// ──────────────────────────────────────────────
+let stream = null;
+let scanAnimFrame = null;
+
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } })
+    .then(s => {
+      stream = s;
+      const video = document.getElementById('camera-video');
+      video.srcObject = s; video.style.display = 'block';
+      document.getElementById('camera-icon').style.display  = 'none';
+      document.getElementById('camera-label').style.display = 'none';
+      document.getElementById('scan-overlay').style.display = 'block';
+      document.getElementById('btn-start-cam').disabled = true;
+      document.getElementById('btn-stop-cam').disabled  = false;
+      toast('📷 Camera started — point at a QR code');
+      video.onloadedmetadata = () => { video.play(); tickScan(); };
+    })
+    .catch(() => toast('❌ Camera access denied. Please allow camera permission.'));
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
+  const video = document.getElementById('camera-video');
+  video.style.display = 'none'; video.srcObject = null;
+  document.getElementById('camera-icon').style.display  = 'block';
+  document.getElementById('camera-label').style.display = 'block';
+  document.getElementById('scan-overlay').style.display = 'none';
+  document.getElementById('btn-start-cam').disabled = false;
+  document.getElementById('btn-stop-cam').disabled  = true;
+}
+
+function tickScan() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.getElementById('scan-canvas');
+  if (!stream || video.readyState !== video.HAVE_ENOUGH_DATA) {
+    scanAnimFrame = requestAnimationFrame(tickScan); return;
+  }
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts:'dontInvert' });
+  if (code) { handleScanResult(code.data); stopCamera(); return; }
+  scanAnimFrame = requestAnimationFrame(tickScan);
+}
+
+function scanUploadedImage(input) {
+  if (!input.files[0]) return;
+  document.getElementById('scan-upload-error').style.display = 'none';
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    c.getContext('2d').drawImage(img,0,0);
+    const id2 = c.getContext('2d').getImageData(0,0,c.width,c.height);
+    const code = jsQR(id2.data, id2.width, id2.height, { inversionAttempts:'attemptBoth' });
+    if (code) { handleScanResult(code.data); }
+    else { document.getElementById('scan-upload-error').style.display='block'; toast('❌ No QR code found in image.'); }
+  };
+  img.src = URL.createObjectURL(input.files[0]);
+}
+
+// 统一处理扫描结果 — 识别是否为本站 viewer 链接
+function handleScanResult(text) {
+  const base = window.location.href.split('#')[0];
+  if (text.startsWith(base + '#viewer/')) {
+    const id = text.replace(base + '#viewer/', '');
+    showScanResult(text, true);
+    // 直接打开 viewer
+    setTimeout(() => openViewer(id), 800);
+  } else {
+    showScanResult(text, false);
+  }
+}
+
+function showScanResult(text, isInternal) {
+  const isUrl = /^https?:\/\//i.test(text);
+  document.getElementById('scan-result-icon').textContent  = isInternal ? '🔐' : (isUrl ? '🔗' : '📄');
+  document.getElementById('scan-result-label').textContent = isInternal ? 'SecureShare QR — opening viewer…' : (isUrl ? 'URL detected' : 'Text detected');
+  document.getElementById('scan-result-value').textContent = text;
+  const openBtn = document.getElementById('scan-open-btn');
+  openBtn.style.display = (!isInternal && isUrl) ? 'block' : 'none';
+  openBtn.dataset.url = text;
+  const box = document.getElementById('scan-result-box');
+  box.style.background = 'rgba(45,106,79,0.08)';
+  box.style.border = '1.5px solid var(--accent-light)';
+  toast('✅ QR code scanned!');
+}
+
+function openScanResult() {
+  const url = document.getElementById('scan-open-btn').dataset.url;
+  if (url) window.open(url, '_blank');
+}
+
+function clearScanResult() {
+  document.getElementById('scan-result-icon').textContent  = '🔍';
+  document.getElementById('scan-result-label').textContent = 'Waiting for scan...';
+  document.getElementById('scan-result-value').textContent = '—';
+  document.getElementById('scan-open-btn').style.display   = 'none';
+  document.getElementById('scan-upload-error').style.display = 'none';
+  document.getElementById('scan-upload-input').value = '';
+  const box = document.getElementById('scan-result-box');
+  box.style.background = 'var(--surface2)'; box.style.border = 'none';
+}
+
+// ──────────────────────────────────────────────
+// PORTFOLIO — dynamic render with actions
+// ──────────────────────────────────────────────
+function renderPortfolio() {
+  const grid   = document.getElementById('portfolio-grid');
+  const badge  = document.getElementById('portfolio-count');
+  const filter = document.getElementById('portfolio-filter').value;
+  let all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  if (filter !== 'all') all = all.filter(r => r.type === filter);
+  badge.textContent = all.length + ' item' + (all.length!==1?'s':'');
+
+  if (all.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-muted);">
+      <div style="font-size:3rem;margin-bottom:14px;">📭</div>
+      <p style="font-weight:600;margin-bottom:8px;">No QR codes yet</p>
+      <button class="btn-submit" style="width:auto;padding:10px 28px;margin-top:8px;" onclick="navClick(document.querySelectorAll('.nav-links a')[1],'generate')">＋ Create QR Code</button>
+    </div>`; return;
+  }
+
+  grid.innerHTML = all.map(item => {
+    const expired = isExpired(item);
+    const emoji   = item.type==='File' ? fileEmoji(item.filename) : (item.type==='URL' ? '🔗' : '📝');
+    const tagCls  = expired ? 'p-tag-expired' : 'p-tag-active';
+    const tagTxt  = expired ? 'Expired' : 'Active';
+    const lockTag = item.password ? '<span class="p-tag p-tag-locked">🔒</span>' : '';
+    const viewerUrl = window.location.href.split('#')[0] + '#viewer/' + item.id;
+
+    return `<div class="portfolio-item" style="${expired?'opacity:0.62':''}">
+      <div class="portfolio-thumb">${emoji}</div>
+      <div class="portfolio-name">${escHtml(item.name||'Untitled')}<span class="p-tag ${tagCls}">${tagTxt}</span>${lockTag}</div>
+      <div class="portfolio-meta">
+        ${item.type} · ${new Date(item.createdAt).toLocaleDateString()}<br>
+        ⏱ ${item.expiryText||'Never'} · 👁 ${item.views||0} views
+      </div>
+      <div class="p-actions">
+        <button class="p-btn" onclick="portfolioShowQR('${item.id}')">📱 QR</button>
+        ${!expired ? `<button class="p-btn" onclick="openViewer('${item.id}')">👁 View</button>` : ''}
+        ${!expired ? `<button class="p-btn red" onclick="revokeItem('${item.id}')">🚫 Revoke</button>` : ''}
+        <button class="p-btn red" onclick="deleteItem('${item.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('') + `
+    <div class="portfolio-item" style="border:2px dashed var(--border);box-shadow:none;display:flex;align-items:center;justify-content:center;min-height:160px;flex-direction:column;gap:8px;color:var(--ink-muted);cursor:pointer;" onclick="navClick(document.querySelectorAll('.nav-links a')[1],'generate')">
+      <div style="font-size:2rem;">＋</div><div style="font-size:0.85rem;font-weight:500;">New QR Code</div>
+    </div>`;
+}
+
+function portfolioShowQR(id) {
+  const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  const item = all.find(r => r.id === id);
+  if (!item) return;
+  const viewerUrl = window.location.href.split('#')[0] + '#viewer/' + id;
+  const existing = document.getElementById('p-qr-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'p-qr-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:white;border-radius:var(--radius);padding:36px;text-align:center;max-width:300px;width:90%;box-shadow:var(--shadow-lg);">
+    <p style="font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:4px;">${escHtml(item.name)}</p>
+    ${item.password ? '<p style="font-size:0.78rem;color:#9a6d00;margin-bottom:8px;">🔒 Password protected</p>' : ''}
+    <div style="height:3px;width:36px;background:var(--gold);border-radius:2px;margin:8px auto 20px;"></div>
+    <div id="modal-qr-out" style="display:inline-block;background:white;padding:12px;border-radius:8px;"></div>
+    <p style="font-size:0.72rem;color:var(--ink-muted);margin-top:10px;">Scan to open viewer</p>
+    <button class="btn-submit" style="margin-top:14px;" onclick="document.getElementById('p-qr-modal').remove()">Close</button>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  setTimeout(() => {
+    try { new QRCode(document.getElementById('modal-qr-out'), { text:viewerUrl, width:180, height:180, colorDark:'#1A1714', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
+  }, 50);
+}
+
+function revokeItem(id) {
+  const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  const idx = all.findIndex(r => r.id===id);
+  if (idx!==-1) { all[idx].revoked = true; localStorage.setItem('ss_qrcodes', JSON.stringify(all)); }
+  renderPortfolio(); toast('🚫 QR code revoked');
+}
+function deleteItem(id) {
+  let all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  all = all.filter(r => r.id!==id);
+  localStorage.setItem('ss_qrcodes', JSON.stringify(all));
+  renderPortfolio(); toast('🗑 Deleted');
+}
+
+// ──────────────────────────────────────────────
+// AUTH SYSTEM
+// ──────────────────────────────────────────────
+function getCurrentUser() { try { return JSON.parse(localStorage.getItem('ss_user')||'null'); } catch { return null; } }
+function getAccounts() { try { return JSON.parse(localStorage.getItem('ss_accounts')||'[]'); } catch { return []; } }
+function saveAccounts(a) { localStorage.setItem('ss_accounts', JSON.stringify(a)); }
+
+</script>
+</body>
+</html>
+function switchUserTab(tab) {
+  ['personal','creations','settings','help'].forEach(p => {
+    document.getElementById('panel-'+p).style.display = p===tab ? 'block' : 'none';
+    const n = document.getElementById('nav-'+p); if(n) n.classList.toggle('active', p===tab);
+  });
+  if (tab==='creations') renderCreations();
+}
+function updateSidebar(user) {
+  document.getElementById('sidebar-avatar').textContent = user ? (user.name||user.email).charAt(0).toUpperCase() : '?';
+  document.getElementById('sidebar-email').textContent  = user ? user.email : 'Not logged in';
+}
+function enterUserDashboard(user) {
+  updateSidebar(user);
+  document.getElementById('panel-auth').style.display = 'none';
+  document.getElementById('profile-name').value  = user.name||'';
+  document.getElementById('profile-email').value = user.email||'';
+  document.getElementById('profile-bio').value   = user.bio||'';
+  switchUserTab('personal');
+  document.getElementById('nav-personal').classList.add('active');
+}
+function initUserCenter() {
+  const user = getCurrentUser();
+  if (user) { enterUserDashboard(user); }
+  else {
+    updateSidebar(null);
+    document.getElementById('panel-auth').style.display = 'block';
+    ['personal','creations','settings','help'].forEach(p => { document.getElementById('panel-'+p).style.display='none'; });
+  }
+}
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value.trim();
+  document.getElementById('email-error').style.display = 'none';
+  document.getElementById('pass-error').style.display  = 'none';
+  let ok = true;
+  if (!email||!email.includes('@')) { document.getElementById('email-error').style.display='block'; ok=false; }
+  if (!pass) { document.getElementById('pass-error').style.display='block'; ok=false; }
+  if (!ok) return;
+  const found = getAccounts().find(a => a.email===email && a.password===pass);
+  if (!found) { document.getElementById('email-error').textContent='Email or password is incorrect'; document.getElementById('email-error').style.display='block'; return; }
+  const user = { email:found.email, name:found.name, bio:found.bio||'' };
+  localStorage.setItem('ss_user', JSON.stringify(user));
+  toast('✅ Welcome back, ' + (user.name||user.email));
+  enterUserDashboard(user);
+}
+function doRegister() {
+  const name=document.getElementById('reg-name').value.trim(), email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-password').value, pass2=document.getElementById('reg-password2').value;
+  const agreed=document.getElementById('agree-terms').checked;
+  ['reg-name-error','reg-email-error','reg-pass-error','reg-pass2-error','reg-terms-error'].forEach(id=>document.getElementById(id).style.display='none');
+  let ok=true;
+  if (!name) { document.getElementById('reg-name-error').style.display='block'; ok=false; }
+  if (!email||!email.includes('@')) { document.getElementById('reg-email-error').style.display='block'; ok=false; }
+  if (!pass||pass.length<6) { document.getElementById('reg-pass-error').style.display='block'; ok=false; }
+  if (pass!==pass2) { document.getElementById('reg-pass2-error').style.display='block'; ok=false; }
+  if (!agreed) { document.getElementById('reg-terms-error').style.display='block'; ok=false; }
+  if (!ok) return;
+  const accounts=getAccounts();
+  if (accounts.find(a=>a.email===email)) { document.getElementById('reg-email-error').textContent='Email already registered'; document.getElementById('reg-email-error').style.display='block'; return; }
+  accounts.push({name,email,password:pass,bio:'',createdAt:new Date().toISOString()});
+  saveAccounts(accounts);
+  const user={email,name,bio:''};
+  localStorage.setItem('ss_user', JSON.stringify(user));
+  toast('🎉 Welcome, '+name+'!');
+  enterUserDashboard(user);
+}
+function doLogout() {
+  localStorage.removeItem('ss_user');
+  updateSidebar(null);
+  document.getElementById('panel-auth').style.display='block';
+  ['personal','creations','settings','help'].forEach(p=>{ document.getElementById('panel-'+p).style.display='none'; const n=document.getElementById('nav-'+p); if(n) n.classList.remove('active'); });
+  switchAuthTab('login');
+  toast('👋 Logged out');
+}
+function saveProfile() {
+  const user=getCurrentUser(); if(!user) return;
+  user.name=document.getElementById('profile-name').value.trim()||user.name;
+  user.bio =document.getElementById('profile-bio').value.trim();
+  localStorage.setItem('ss_user', JSON.stringify(user));
+  const accounts=getAccounts(), idx=accounts.findIndex(a=>a.email===user.email);
+  if(idx!==-1){accounts[idx].name=user.name;accounts[idx].bio=user.bio;saveAccounts(accounts);}
+  updateSidebar(user); toast('✅ Profile updated!');
+}
+function changePassword() {
+  const p1=document.getElementById('new-pass').value, p2=document.getElementById('new-pass2').value;
+  document.getElementById('new-pass-error').style.display='none';
+  if (!p1) { toast('Please enter a new password'); return; }
+  if (p1.length<6) { toast('Minimum 6 characters'); return; }
+  if (p1!==p2) { document.getElementById('new-pass-error').style.display='block'; return; }
+  const user=getCurrentUser(), accounts=getAccounts(), idx=accounts.findIndex(a=>a.email===user.email);
+  if(idx!==-1){accounts[idx].password=p1;saveAccounts(accounts);}
+  document.getElementById('new-pass').value=''; document.getElementById('new-pass2').value='';
+  toast('✅ Password updated!');
+}
+function renderCreations() {
+  const list=document.getElementById('creations-list');
+  const all=JSON.parse(localStorage.getItem('ss_qrcodes')||'[]');
+  if(!all.length){list.innerHTML='<p style="color:var(--ink-muted);font-size:0.9rem;text-align:center;padding:32px 0;">No QR codes yet.</p>';return;}
+  list.innerHTML=all.map(item=>{
+    const expired=isExpired(item);
+    const dot=expired?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--danger);margin-right:5px;"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent-light);margin-right:5px;"></span>';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);gap:10px;">
+      <div style="min-width:0;"><p style="font-weight:600;font-size:0.9rem;">${dot}${escHtml(item.name||'Untitled')}</p>
+      <p style="font-size:0.78rem;color:var(--ink-muted);">${item.type} · ${new Date(item.createdAt).toLocaleDateString()} · 👁 ${item.views||0}</p></div>
+      <button onclick="deleteItem('${item.id}')" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem;color:var(--danger);" onmouseover="this.style.background='var(--danger)';this.style.color='white';" onmouseout="this.style.background='none';this.style.color='var(--danger)';">Delete</button>
+    </div>`;
+  }).join('');
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const el = document.getElementById('toast-msg');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── DRAG & DROP ──
+const dz = document.getElementById('drop-zone');
+if (dz) {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; });
+  dz.addEventListener('dragleave', () => { dz.style.borderColor='var(--border)'; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.style.borderColor='var(--border)';
+    const f = e.dataTransfer.files[0];
+    if (f) { document.getElementById('file-input').files = e.dataTransfer.files; fileSelected({files:[f]}); }
+  });
+}
+
+// ── HASH ROUTER — 扫码跳转到 viewer ──
+function handleHash() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#viewer/')) {
+    const id = hash.replace('#viewer/','');
+    openViewer(id);
+  }
+}
+window.addEventListener('hashchange', handleHash);
+window.addEventListener('load', handleHash);
+
+</script>
+</body>
+</html>
