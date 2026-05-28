@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg: #F4F1EC;
@@ -966,6 +967,12 @@
 </footer>
 
 <script>
+  // ── SUPABASE 配置 ──
+const SUPABASE_URL = 'https://lqsmmtzyrqezvvgawzh.supabase.co/rest/v1/';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxc25tdHp5cnpxZXp2dmdhd3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NjExNjksImV4cCI6MjA5NTUzNzE2OX0.SaHlQrUZ6NT8blC_3CuvELUa3-Fe1W7RkaffTATtrQk';
+
+const { createClient } = window.supabase;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ── PAGE NAVIGATION ──
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1042,35 +1049,40 @@ function renderQRCanvas(outputId, placeholderId, dlBtnId, content, onSuccess) {
 // ──────────────────────────────────────────────
 // URL TAB — generateQR (with real password logic)
 // ──────────────────────────────────────────────
-function generateQR() {
+async function generateQR() {
   const url = document.getElementById('url-input').value.trim();
   const name = document.getElementById('qr-name').value.trim() || 'Unnamed QR';
   const pass = document.getElementById('qr-pass').value.trim() || '';
   
   if (!url) { toast('❌ Please enter a URL'); return; }
   
-  // 生成唯一 ID
   const qrId = 'qr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   
-  // 保存到本地存储
-  const record = {
-    id: qrId,
-    type: 'URL',
-    content: url,
-    name: name,
-    password: pass,
-    createdAt: Date.now()
-  };
-  
   try {
-    const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
-    all.unshift(record);
-    localStorage.setItem('ss_qrcodes', JSON.stringify(all));
-  } catch(e) {}
+    const { data, error } = await supabase
+      .from('qr_codes')
+      .insert([
+        {
+          id: qrId,
+          type: 'URL',
+          content: url,
+          name: name,
+          password: pass,
+          created_at: Date.now()
+        }
+      ]);
+    
+    if (error) {
+      toast('❌ Failed to save QR code: ' + error.message);
+      return;
+    }
+    
+  } catch(e) {
+    toast('❌ Error: ' + e.message);
+    return;
+  }
   
-  // 关键：编码本网站的链接，不是目标URL
   const qrLink = window.location.origin + window.location.pathname + '?view=' + qrId;
-  
   renderQRCanvas('qr-output', 'qr-placeholder', 'btn-dl', qrLink);
   
   document.getElementById('url-qr-info').style.display = 'block';
@@ -1501,38 +1513,48 @@ function getAccounts() { try { return JSON.parse(localStorage.getItem('ss_accoun
 function saveAccounts(a) { localStorage.setItem('ss_accounts', JSON.stringify(a)); }
 
 
+
 // ── QR VIEWER 初始化 ──
-function initQRViewer() {
+async function initQRViewer() {
   const params = new URLSearchParams(window.location.search);
   const qrId = params.get('view');
   
   if (!qrId) return;
   
   try {
-    const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
-    const record = all.find(r => r.id === qrId);
+    const { data, error } = await supabase
+      .from('qr_codes')
+      .select('*')
+      .eq('id', qrId)
+      .single();
     
-    if (!record) {
-      alert('QR code not found');
+    if (error || !data) {
+      document.getElementById('viewer-title').textContent = '❌ QR Code Not Found';
+      return;
+    }
+    
+    if (data.revoked) {
+      document.getElementById('viewer-title').textContent = '❌ QR Code Revoked';
       return;
     }
     
     showPage('viewer');
-    document.getElementById('viewer-title').textContent = record.name || 'Secure Content';
+    document.getElementById('viewer-title').textContent = data.name || 'Secure Content';
     document.getElementById('viewer-icon').textContent = '🔗';
     
-    if (record.password) {
+    if (data.password) {
       document.getElementById('viewer-password-area').style.display = 'block';
       document.getElementById('viewer-content').style.display = 'none';
+      document.getElementById('viewer-pass-input').dataset.qrId = qrId;
     } else {
-      showViewerContent(record, qrId);
+      showViewerContent(data);
     }
   } catch(e) {
-    alert('Error loading QR code');
+    document.getElementById('viewer-title').textContent = '❌ Error loading QR';
   }
 }
 
-function showViewerContent(record, qrId) {
+function showViewerContent(record) {
   document.getElementById('viewer-password-area').style.display = 'none';
   document.getElementById('viewer-content').style.display = 'block';
   
@@ -1543,19 +1565,26 @@ function showViewerContent(record, qrId) {
       window.open(record.content, '_blank');
     };
   }
+  
+  document.getElementById('viewer-meta').innerHTML = 
+    `<b>📊 Info:</b><br>Type: ${record.type}<br>Created: ${new Date(record.created_at).toLocaleString()}`;
 }
 
-function verifyViewerPassword() {
-  const params = new URLSearchParams(window.location.search);
-  const qrId = params.get('view');
+async function verifyViewerPassword() {
   const inputPass = document.getElementById('viewer-pass-input').value;
+  const qrId = document.getElementById('viewer-pass-input').dataset.qrId;
   
   try {
-    const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
-    const record = all.find(r => r.id === qrId);
+    const { data, error } = await supabase
+      .from('qr_codes')
+      .select('*')
+      .eq('id', qrId)
+      .single();
     
-    if (inputPass === record.password) {
-      showViewerContent(record, qrId);
+    if (error || !data) return;
+    
+    if (inputPass === data.password) {
+      showViewerContent(data);
     } else {
       document.getElementById('viewer-pass-error').style.display = 'block';
     }
