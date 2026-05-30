@@ -968,11 +968,40 @@
 
 <script>
   // ── SUPABASE 配置 ──
-const SUPABASE_URL = 'https://lqsmmtzyrqezvvgawzh.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://lqsmmtzyrqezvvgawzh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxc25tdHp5cnpxZXp2dmdhd3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NjExNjksImV4cCI6MjA5NTUzNzE2OX0.SaHlQrUZ6NT8blC_3CuvELUa3-Fe1W7RkaffTATtrQk';
 
 const { createClient } = window.supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  // --- 新增 Supabase + 本地双写/双读工具函数 ---
+
+// 保存到 Supabase（失败则写本地 localStorage 备份）
+async function saveQRRecord(record) {
+  try {
+    const { error } = await supabase.from('qr_codes').insert([record]);
+    if (error) throw error;
+  } catch (e) {
+    try {
+      const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+      all.unshift(record);
+      localStorage.setItem('ss_qrcodes', JSON.stringify(all));
+    } catch (e2) {}
+  }
+}
+
+// 从 Supabase 读取所有 QR 记录（失败则读 localStorage 备份）
+async function loadQRRecords() {
+  try {
+    const { data, error } = await supabase.from('qr_codes').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+    return JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+  } catch (e) {
+    try {
+      return JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+    } catch (e2) { return []; }
+  }
+}
 // ── PAGE NAVIGATION ──
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1053,42 +1082,22 @@ async function generateQR() {
   const url = document.getElementById('url-input').value.trim();
   const name = document.getElementById('qr-name').value.trim() || 'Unnamed QR';
   const pass = document.getElementById('qr-pass').value.trim() || '';
-  
   if (!url) { toast('❌ Please enter a URL'); return; }
-  
-  const qrId = 'qr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  
-  try {
-    const { data, error } = await supabase
-      .from('qr_codes')
-      .insert([
-        {
-          id: qrId,
-          type: 'URL',
-          content: url,
-          name: name,
-          password: pass,
-          created_at: Date.now()
-        }
-      ]);
-    
-    if (error) {
-      toast('❌ Failed to save QR code: ' + error.message);
-      return;
-    }
-    
-  } catch(e) {
-    toast('❌ Error: ' + e.message);
-    return;
-  }
-  
+  const qrId = 'ssurl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  const record = {
+    id: qrId,
+    type: 'URL',
+    content: url,
+    name: name,
+    password: pass,
+    created_at: Date.now()
+  };
+  await saveQRRecord(record);
   const qrLink = window.location.origin + window.location.pathname + '?view=' + qrId;
   renderQRCanvas('qr-output', 'qr-placeholder', 'btn-dl', qrLink);
-  
   document.getElementById('url-qr-info').style.display = 'block';
-  document.getElementById('url-qr-info').innerHTML = 
+  document.getElementById('url-qr-info').innerHTML =
     `<strong>✓ QR Generated!</strong><br><small>Name: ${escHtml(name)}<br>Target: ${escHtml(url)}</small>`;
-  
   toast('✓ QR code generated successfully!');
 }
 function liveGenerateText() {
@@ -1423,21 +1432,26 @@ function clearScanResult() {
 // ──────────────────────────────────────────────
 // PORTFOLIO — dynamic render with actions
 // ──────────────────────────────────────────────
-function renderPortfolio() {
-  const grid   = document.getElementById('portfolio-grid');
-  const badge  = document.getElementById('portfolio-count');
-  const filter = document.getElementById('portfolio-filter').value;
-  let all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
-  if (filter !== 'all') all = all.filter(r => r.type === filter);
-  badge.textContent = all.length + ' item' + (all.length!==1?'s':'');
-
-  if (all.length === 0) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-muted);">
-      <div style="font-size:3rem;margin-bottom:14px;">📭</div>
-      <p style="font-weight:600;margin-bottom:8px;">No QR codes yet</p>
-      <button class="btn-submit" style="width:auto;padding:10px 28px;margin-top:8px;" onclick="navClick(document.querySelectorAll('.nav-links a')[1],'generate')">＋ Create QR Code</button>
-    </div>`; return;
-  }
+async function renderPortfolio() {
+  const records = await loadQRRecords();
+  const grid = document.getElementById('portfolio-grid');
+  grid.innerHTML = '';
+  document.getElementById('portfolio-count').textContent = records.length;
+  records.forEach(function(record){
+    const el = document.createElement('div');
+    el.className = 'portfolio-item';
+    el.innerHTML = `
+      <div class="portfolio-thumb">🔗</div>
+      <div class="portfolio-name">${record.name || 'No Name'}</div>
+      <div class="portfolio-meta">${record.type} • ${record.created_at ? new Date(record.created_at).toLocaleString() : ''}</div>
+      <div class="p-actions">
+        <button class="p-btn" onclick="window.location.href='?view=${record.id}'">View</button>
+        <button class="p-btn red" onclick="deleteItem('${record.id}')">Delete</button>
+      </div>
+    `;
+    grid.appendChild(el);
+  });
+}
 
   grid.innerHTML = all.map(item => {
     const expired = isExpired(item);
@@ -1529,14 +1543,15 @@ async function initQRViewer() {
       .single();
     
     if (error || !data) {
-      document.getElementById('viewer-title').textContent = '❌ QR Code Not Found';
-      return;
-    }
-    
-    if (data.revoked) {
-      document.getElementById('viewer-title').textContent = '❌ QR Code Revoked';
-      return;
-    }
+       { showViewerContent(data); return; }
+  } catch(e) {}
+     try {
+    const all = JSON.parse(localStorage.getItem('ss_qrcodes') || '[]');
+    const record = all.find(r => r.id === qrId);
+   if (record) { showViewerContent(record); return; }
+  } catch(e2) {}
+  document.getElementById('viewer-title').textContent = '❌ QR Code Not Found';
+}
     
     showPage('viewer');
     document.getElementById('viewer-title').textContent = data.name || 'Secure Content';
